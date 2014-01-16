@@ -302,6 +302,13 @@ If region is active, use it as the sample."
   (setq-local macol-face-keyword :background)
   (message "Background has been set for colorizing."))
 
+(defun macol-toggle-face-parameter ()
+  "Switch between setting foreground and background."
+  (interactive)
+  (if (equal macol-face-keyword :foreground)
+      (macol-use-background)
+    (macol-use-foreground)))
+
 (provide 'make-color)
 
 ;;; make-color.el ends here
