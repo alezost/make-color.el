@@ -81,6 +81,17 @@ If nil, end probing text in the end of the sample."
           (const :tag "Background" :background))
   :group 'make-color)
 
+(defcustom macol-color-after-change 'new
+  "What color should be used after changing the probing region.
+If `old', current color stays the same.
+If `new', current color will be set to the color of the probing region.
+If `prompt', ask a user what color should be used."
+  :type '(choice
+          (const :tag "Do not change current color" old)
+          (const :tag "Use the color of the probing region" new)
+          (const :tag "Ask" prompt))
+  :group 'make-color)
+
 (defvar macol-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "p" 'macol-change-step)
@@ -228,6 +239,12 @@ If BUFFER is nil, use current buffer."
     (or (eq major-mode 'macol-mode)
         (error "Current buffer should be in macol-mode"))))
 
+(defun macol-unkeyword (kw)
+  "Return a symbol same as keyword KW but without leading `:'."
+  (or (keywordp kw)
+      (error "Symbol `%s' is not a keyword" kw))
+  (make-symbol (substring (symbol-name kw) 1)))
+
 (defun macol-get-buffer (&optional clear)
   "Return macol buffer.
 If CLEAR is non-nil, delete its contents."
@@ -276,7 +293,8 @@ If region is active, use it as the sample."
     (macol-mode)
     (insert sample)
     (goto-char (point-min))
-    (setq-local macol-probing-region-bounds region)))
+    (setq-local macol-probing-region-bounds region)
+    (macol-update-current-color-maybe)))
 
 (defun macol-set-probing-region ()
   "Use current region for colorizing."
@@ -285,23 +303,46 @@ If region is active, use it as the sample."
   (if (region-active-p)
       (progn (setq macol-probing-region-bounds
                    (cons (region-beginning) (region-end)))
+             (macol-update-current-color-maybe)
              (deactivate-mark)
              (message "The region was set for color probing."))
     (if (y-or-n-p (concat "No active region. Use the whole sample for colorizing?"))
-        (setq macol-probing-region-bounds (cons nil nil))
+        (progn (setq macol-probing-region-bounds (cons nil nil))
+               (macol-update-current-color-maybe))
       ;; TODO do not hard-code "n"
       (message "Select a region for colorizing and press \"n\"."))))
+
+(defun macol-update-current-color-maybe ()
+  "Update `macol-current-color' according to `macol-color-after-change'."
+  (let ((color
+         (color-name-to-rgb
+          (cl-case macol-color-after-change
+            (new (save-excursion
+                   (goto-char (or (car macol-probing-region-bounds)
+                                  0))
+                   (or (funcall
+                        (intern (format "%s-color-at-point"
+                                        (macol-unkeyword
+                                         macol-face-keyword))))
+                       ;; if color at point is invalid, use default face
+                       (face-attribute 'default macol-face-keyword nil t))))
+            ;; TODO Use `macol-current-color' as default?
+            (ask (read-color))))))
+    (and color
+         (setq macol-current-color color))))
 
 (defun macol-use-foreground ()
   "Set foreground as the parameter for further changing."
   (interactive)
   (setq-local macol-face-keyword :foreground)
+  (macol-update-current-color-maybe)
   (message "Foreground has been set for colorizing."))
 
 (defun macol-use-background ()
   "Set background as the parameter for further changing."
   (interactive)
   (setq-local macol-face-keyword :background)
+  (macol-update-current-color-maybe)
   (message "Background has been set for colorizing."))
 
 (defun macol-toggle-face-parameter ()
@@ -314,4 +355,3 @@ If region is active, use it as the sample."
 (provide 'make-color)
 
 ;;; make-color.el ends here
-
