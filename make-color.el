@@ -94,6 +94,7 @@ If `prompt', ask a user what color should be used."
 
 (defvar macol-mode-map
   (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'macol-set-current-color)
     (define-key map "p" 'macol-change-step)
     (define-key map "f" 'macol-use-foreground)
     (define-key map "d" 'macol-use-background)
@@ -311,6 +312,19 @@ If region is active, use it as the sample."
                (macol-update-current-color-maybe))
       ;; TODO do not hard-code "n"
       (message "Select a region for colorizing and press \"n\"."))))
+
+(defun macol-set-current-color ()
+  "Set current color to the prompted value and update probing region."
+  (interactive)
+  (let ((color (read-color
+                (concat "Color"
+                        (and macol-current-color
+                             (format " (current: %s)"
+                                     (apply 'color-rgb-to-hex
+                                            macol-current-color)))
+                        ": "))))
+    (unless (string= color "")
+      (macol-update-sample (color-name-to-rgb color)))))
 
 (defun macol-update-current-color-maybe ()
   "Update `macol-current-color' according to `macol-color-after-change'."
