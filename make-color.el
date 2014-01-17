@@ -81,15 +81,11 @@ If nil, end probing text in the end of the sample."
           (const :tag "Background" :background))
   :group 'make-color)
 
-(defcustom macol-color-after-change 'new
+(defcustom macol-new-color-after-region-change t
   "What color should be used after changing the probing region.
-If `old', current color stays the same.
-If `new', current color will be set to the color of the probing region.
-If `prompt', ask a user what color should be used."
-  :type '(choice
-          (const :tag "Do not change current color" old)
-          (const :tag "Use the color of the probing region" new)
-          (const :tag "Ask" prompt))
+If nil, current color stays the same.
+If non-nil, current color is set to the color of the probing region."
+  :type 'boolean
   :group 'make-color)
 
 (defvar macol-mode-map
@@ -327,23 +323,20 @@ If region is active, use it as the sample."
       (macol-update-sample (color-name-to-rgb color)))))
 
 (defun macol-update-current-color-maybe ()
-  "Update `macol-current-color' according to `macol-color-after-change'."
-  (let ((color
-         (color-name-to-rgb
-          (cl-case macol-color-after-change
-            (new (save-excursion
-                   (goto-char (or (car macol-probing-region-bounds)
-                                  0))
-                   (or (funcall
-                        (intern (format "%s-color-at-point"
-                                        (macol-unkeyword
-                                         macol-face-keyword))))
-                       ;; if color at point is invalid, use default face
-                       (face-attribute 'default macol-face-keyword nil t))))
-            ;; TODO Use `macol-current-color' as default?
-            (ask (read-color))))))
-    (and color
-         (setq macol-current-color color))))
+  "Update current color according to `macol-new-color-after-region-change'."
+  (when macol-new-color-after-region-change
+    (setq
+     macol-current-color
+     (color-name-to-rgb
+      (save-excursion
+        (goto-char (or (car macol-probing-region-bounds)
+                       0))
+        (or (funcall
+             (intern (format "%s-color-at-point"
+                             (macol-unkeyword
+                              macol-face-keyword))))
+            ;; if color at point is invalid, use default face
+            (face-attribute 'default macol-face-keyword nil t)))))))
 
 (defun macol-use-foreground ()
   "Set foreground as the parameter for further changing."
