@@ -91,7 +91,7 @@ If non-nil, current color is set to the color of the probing region."
 (defvar macol-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'macol-set-current-color)
-    (define-key map "p" 'macol-change-step)
+    (define-key map "p" 'macol-set-step)
     (define-key map "f" 'macol-use-foreground)
     (define-key map "d" 'macol-use-background)
     (define-key map "t" 'macol-toggle-face-parameter)
@@ -227,6 +227,7 @@ For other args, see `macol-define-shift-function'."
 \\{macol-mode-map}"
   (make-local-variable 'macol-current-color)
   (make-local-variable 'macol-probing-region-bounds)
+  (make-local-variable 'macol-shift-step)
   (make-local-variable 'macol-face-keyword))
 
 (defun macol-check-mode (&optional buffer)
@@ -292,6 +293,17 @@ If region is active, use it as the sample."
     (goto-char (point-min))
     (setq-local macol-probing-region-bounds region)
     (macol-update-current-color-maybe)))
+
+(defun macol-set-step (step)
+  "Set `macol-shift-step' to a value STEP.
+Interactively, prompt for STEP."
+  (interactive
+   (list (read-number "Set step to: " macol-shift-step)))
+  (if (and (floatp step)
+           (>= 1.0 step)
+           (<= 0.0 step))
+      (setq macol-shift-step step)
+    (error "Should be a value from 0.0 to 1.0")))
 
 (defun macol-set-probing-region ()
   "Use current region for colorizing."
