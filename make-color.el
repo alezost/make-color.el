@@ -91,11 +91,12 @@ If non-nil, current color is set to the color of the probing region."
 (defvar macol-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'macol-set-current-color)
+    (define-key map "n" 'macol-set-probing-region)
     (define-key map "p" 'macol-set-step)
     (define-key map "f" 'macol-use-foreground)
     (define-key map "d" 'macol-use-background)
     (define-key map "t" 'macol-toggle-face-parameter)
-    (define-key map "n" 'macol-set-probing-region)
+    (define-key map "k" 'macol-current-color-to-kill-ring)
     (define-key map "u" 'undo)
     (define-key map "q" 'bury-buffer)
     map)
@@ -370,6 +371,15 @@ Interactively, prompt for STEP."
   (if (equal macol-face-keyword :foreground)
       (macol-use-background)
     (macol-use-foreground)))
+
+(defun macol-current-color-to-kill-ring ()
+  "Add current color to the `kill-ring'."
+  (interactive)
+  (or macol-current-color
+      (error "macol-current-color is nil"))
+  (let ((color (apply 'color-rgb-to-hex macol-current-color)))
+    (kill-new color)
+    (message "Color '%s' has been put into kill-ring." color)))
 
 (provide 'make-color)
 
