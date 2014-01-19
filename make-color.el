@@ -92,7 +92,8 @@ If non-nil, current color is set to the color of the probing region."
 
 (defvar macol-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'macol-set-current-color)
+    (define-key map "\C-j" 'newline)
+    (define-key map "\C-m" 'macol-set-current-color)
     (define-key map "n" 'macol-set-probing-region)
     (define-key map "p" 'macol-set-step)
     (define-key map "f" 'macol-use-foreground)
