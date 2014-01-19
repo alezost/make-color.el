@@ -30,7 +30,8 @@
 (require 'cl-macs)
 
 (defgroup make-color nil
-  "Options for \"make-color\" package.")
+  "Find suitable color by modifying a text sample."
+  :group 'faces)
 
 (defcustom macol-shift-step 0.02
   "Step of shifting a component of the current color.
