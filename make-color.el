@@ -60,12 +60,13 @@ If nil, end probing text in the end of the sample."
   :group 'make-color)
 
 (defcustom macol-buffer-name "*macol*"
-  "Default name of the make-color buffer."
+  "Default name of the macol buffer."
   :type 'string
   :group 'make-color)
 
 (defcustom macol-use-single-buffer t
-  "If non-nil, use only one make-color buffer."
+  "If nil, create a new macol buffer for each `macol-make-color' call.
+If non-nil, use only one macol buffer."
   :type 'boolean
   :group 'make-color)
 
@@ -217,6 +218,56 @@ For other args, see `macol-define-shift-function'."
 (macol-define-shift-functions "hsl" "luminance"  "l" :luminance)
 
 
+;;; Macol buffers
+
+;;;###autoload
+(defun macol-switch-to-buffer (&optional arg)
+  "Switch to macol buffer or create one.
+With prefix, make a new macol buffer unconditionally."
+  (interactive "P")
+  (let ((bufs (macol-get-buffers))
+        buf)
+    (if (or arg (null bufs))
+        (macol-make-color)
+      ;; delete current macol buffer from `bufs'
+      (when (eq major-mode 'macol-mode)
+        (setq bufs (delete (current-buffer) bufs)))
+      (cond
+       ((null bufs)
+        (message "This is a single macol buffer."))
+       ((null (cdr bufs))   ; there is only one non-current macol buffer
+        (setq buf (car bufs)))
+       (t
+        (setq buf (completing-read "Macol buffer: "
+                                   (mapcar #'buffer-name bufs)
+                                   nil t))))
+      (when buf
+        (let ((win (get-buffer-window buf)))
+          (if win
+              (select-window win)
+            (pop-to-buffer-same-window (get-buffer buf))))))))
+
+(defun macol-get-buffers ()
+  "Return a list of macol buffers."
+  (let ((re (regexp-quote macol-buffer-name)))
+    (cl-remove-if-not
+     (lambda (buf) (string-match re (buffer-name buf)))
+     (buffer-list))))
+
+(defun macol-get-buffer (&optional clear)
+  "Return macol buffer.
+If CLEAR is non-nil, delete contents of the buffer.
+If `macol-use-single-buffer' is nil, create a new macol buffer,
+otherwise return an existing one."
+  (let ((buf (get-buffer-create
+              (if macol-use-single-buffer
+                  macol-buffer-name
+                (generate-new-buffer-name macol-buffer-name)))))
+    (when clear
+      (with-current-buffer buf (erase-buffer)))
+    buf))
+
+
 ;;; UI
 
 (defvar macol-probing-region-bounds nil
@@ -243,17 +294,6 @@ If BUFFER is nil, use current buffer."
   (or (keywordp kw)
       (error "Symbol `%s' is not a keyword" kw))
   (make-symbol (substring (symbol-name kw) 1)))
-
-(defun macol-get-buffer (&optional clear)
-  "Return macol buffer.
-If CLEAR is non-nil, delete its contents."
-  (let ((buf (get-buffer-create
-              (if macol-use-single-buffer
-                  macol-buffer-name
-                (generate-new-buffer-name macol-buffer-name)))))
-    (when clear
-      (with-current-buffer buf (erase-buffer)))
-    buf))
 
 (defun macol-update-sample (color &optional buffer)
   "Update current color and text sample in the macol BUFFER with COLOR.
