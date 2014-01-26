@@ -149,6 +149,8 @@ Should accept 4 arguments:
     (define-key map "d" 'macol-use-background)
     (define-key map "t" 'macol-toggle-face-parameter)
     (define-key map "k" 'macol-current-color-to-kill-ring)
+    (define-key map "F" 'macol-foreground-color-to-kill-ring)
+    (define-key map "D" 'macol-background-color-to-kill-ring)
     (define-key map "u" 'undo)
     (define-key map "q" 'bury-buffer)
     map)
@@ -525,14 +527,33 @@ Interactively, prompt for STEP."
       (macol-use-background)
     (macol-use-foreground)))
 
+(defun macol-color-to-kill-ring (color)
+  "Add color value of COLOR to the `kill-ring'.
+COLOR can be a string (color name or a hex value) or a list in a
+form (R G B)."
+  (when (listp color)
+    (setq color (apply 'color-rgb-to-hex color)))
+  (kill-new color)
+  (message "Color '%s' has been put into kill-ring." color))
+
 (defun macol-current-color-to-kill-ring ()
   "Add current color to the `kill-ring'."
   (interactive)
   (or macol-current-color
       (error "macol-current-color is nil"))
-  (let ((color (apply 'color-rgb-to-hex macol-current-color)))
-    (kill-new color)
-    (message "Color '%s' has been put into kill-ring." color)))
+  (macol-color-to-kill-ring macol-current-color))
+
+;;;###autoload
+(defun macol-foreground-color-to-kill-ring ()
+  "Add foreground color at point to the `kill-ring'."
+  (interactive)
+  (macol-color-to-kill-ring (macol-foreground-color-at-point)))
+
+;;;###autoload
+(defun macol-background-color-to-kill-ring ()
+  "Add background color at point to the `kill-ring'."
+  (interactive)
+  (macol-color-to-kill-ring (macol-background-color-at-point)))
 
 (provide 'make-color)
 
