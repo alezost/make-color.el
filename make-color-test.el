@@ -33,4 +33,13 @@ See `macol-floats-equal-p' for PRECISION."
            (macol-get-color-by-hsl :hue -0.3 :luminance 0.4 :saturation 0.1)
            '(0.376 0.36 0.44))))
 
+(ert-deftest macol-test-get-color-from-face-spec ()
+  "Test `macol-get-color-from-face-spec'."
+  (should (equal (macol-get-color-from-face-spec
+                  :foreground '(:background "blue"))
+                 nil))
+  (should (equal (macol-get-color-from-face-spec
+                  :background '((font-lock-doc-face (:foreground "blue"))
+                                some-unknown-face (((:background "#123456")))))
+                 "#123456")))
 
