@@ -122,6 +122,23 @@ If non-nil, current color is set to the color of the probing region."
   :type 'boolean
   :group 'make-color)
 
+(defcustom macol-get-color-function 'macol-get-color-at-pos
+  "Function used for getting a color of a character.
+Should accept 2 arguments: a symbol or keyword
+`foreground'/`background' and a point position."
+  :type 'function
+  :group 'make-color)
+
+(defcustom macol-set-color-function 'macol-set-color
+  "Function used for setting a color of a region.
+Should accept 4 arguments:
+  - symbol or keyword `foreground'/`background',
+  - color - a list (R G B) of float numbers from 0.0 to 1.0,
+  - position of the beginning of region,
+  - position of the end of region."
+  :type 'function
+  :group 'make-color)
+
 (defvar macol-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-j" 'newline)
@@ -410,10 +427,10 @@ If BUFFER is nil, use current buffer."
                        (point-max))))
           (setq macol-current-color color
                 color (apply 'color-rgb-to-hex color))
-          (facemenu-add-face (list (list macol-face-keyword color))
-                             beg end)
+          (funcall macol-set-color-function
+                   macol-face-keyword color beg end)
           (and macol-show-color
-               (message "Current color: %s" color)))        
+               (message "Current color: %s" color)))
       (macol-set-probing-region))))
 
 ;;;###autoload
@@ -485,12 +502,7 @@ Interactively, prompt for STEP."
       (save-excursion
         (goto-char (or (car macol-probing-region-bounds)
                        0))
-        (or (funcall
-             (intern (format "%s-color-at-point"
-                             (macol-unkeyword
-                              macol-face-keyword))))
-            ;; if color at point is invalid, use default face
-            (face-attribute 'default macol-face-keyword nil t)))))))
+        (macol-get-color-at-pos macol-face-keyword))))))
 
 (defun macol-use-foreground ()
   "Set foreground as the parameter for further changing."
