@@ -4,7 +4,7 @@
 
 ;; Author: Alex Kost <alezost@gmail.com>
 ;; Created: 9 Jan 2014
-;; Version: 0.1
+;; Version: 0.2
 ;; URL: http://github.com/alezost/make-color.el
 ;; Keywords: color
 
