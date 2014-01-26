@@ -302,6 +302,66 @@ otherwise return an existing one."
     buf))
 
 
+;;; Getting and setting faces
+
+;; Original `foreground-color-at-point' and `background-color-at-point'
+;; don't understand faces with property lists of face attributes (see
+;; (info "(elisp) Special Properties")).  For example, if a face was set
+;; by `facemenu-set-foreground'/`facemenu-set-background' the original
+;; functions return nil, so we need some code for getting a color.
+
+(defun macol-set-color (param color beg end)
+  "Set color of the text between BEG and END.
+Param is a symbol or keyword `foreground' or `background'.
+COLOR should be a list in a form (R G B)."
+  (facemenu-add-face (list (list (macol-keyword param) color))
+                     beg end))
+
+(defun macol-get-color-from-face-spec (param spec)
+  "Return color from face specification SPEC.
+PARAM is a keyword `:foreground' or `:background'.
+SPEC can be a face name, a property list of face attributes or a
+list of any level of nesting containing face names or property
+lists.
+Returning value is a string: either a color name or a hex value.
+If PARAM is not found in SPEC, return nil."
+  (cond
+   ((facep spec)
+    (face-attribute-specified-or (face-attribute spec param nil t)
+                                 nil))
+   ((listp spec)
+    (if (keywordp (car spec))
+        (plist-get spec param)
+      (let (res)
+        (cl-loop for elt in spec
+                 do (setq res (macol-get-color-from-face-spec
+                               param elt))
+                 until res)
+        res)))
+   (t
+    (message "Ignoring unknown face specification '%s'." spec)
+    nil)))
+
+(defun macol-get-color-at-pos (param &optional pos)
+  "Return color of a character at position POS.
+PARAM is a symbol or keyword `foreground' or `background'.
+If POS is not specified, use current point positiion."
+  (let ((param (macol-keyword param))
+        (faceprop (get-char-property (or pos (point)) 'face)))
+    (or (and faceprop
+             (macol-get-color-from-face-spec param faceprop))
+        ;; if color was not found, use default face
+        (face-attribute 'default param))))
+
+(defun macol-foreground-color-at-point ()
+  "Return foreground color of the character at point."
+  (macol-get-color-at-pos :foreground (point)))
+
+(defun macol-background-color-at-point ()
+  "Return background color of the character at point."
+  (macol-get-color-at-pos :background (point)))
+
+
 ;;; UI
 
 (defvar macol-probing-region-bounds nil
@@ -322,6 +382,13 @@ If BUFFER is nil, use current buffer."
   (with-current-buffer (or buffer (current-buffer))
     (or (eq major-mode 'macol-mode)
         (error "Current buffer should be in macol-mode"))))
+
+(defun macol-keyword (symbol)
+  "Return a keyword same as SYMBOL but with leading `:'.
+If SYMBOL is a keyword, return it."
+  (if (keywordp symbol)
+      symbol
+    (make-symbol (concat ":" (symbol-name symbol)))))
 
 (defun macol-unkeyword (kw)
   "Return a symbol same as keyword KW but without leading `:'."
