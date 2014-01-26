@@ -176,9 +176,9 @@ can't formulate it, look at the code."
   "Return RGB color by modifying COLOR with RED/GREEN/BLUE values.
 COLOR and returning value are lists in a form (R G B).
 RED/GREEN/BLUE are numbers from 0.0 to 1.0."
-  (list (macol-+ (list (car   color) red))
-        (macol-+ (list (cadr  color) green))
-        (macol-+ (list (caddr color) blue))))
+  (list (macol-+ (list (car      color) red))
+        (macol-+ (list (cadr     color) green))
+        (macol-+ (list (cl-caddr color) blue))))
 
 (cl-defun macol-shift-color-by-hsl (color &key (hue 0) (saturation 0) (luminance 0))
   "Return RGB color by modifying COLOR with HUE/SATURATION/LUMINANCE values.
@@ -186,9 +186,9 @@ COLOR and returning value are lists in a form (R G B).
 HUE/SATURATION/LUMINANCE are numbers from 0.0 to 1.0."
   (let ((hsl (apply 'color-rgb-to-hsl color)))
     (color-hsl-to-rgb
-     (macol-+ (list (car   hsl) hue) 'overlap)
-     (macol-+ (list (cadr  hsl) saturation))
-     (macol-+ (list (caddr hsl) luminance)))))
+     (macol-+ (list (car      hsl) hue) 'overlap)
+     (macol-+ (list (cadr     hsl) saturation))
+     (macol-+ (list (cl-caddr hsl) luminance)))))
 
 
 ;;; Shifting current color
