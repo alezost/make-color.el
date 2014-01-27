@@ -1,14 +1,11 @@
 ## About
 
-`Make-color` (`macol`) provides a convenient (IMHO) way for finding a
-suitable color by updating a color of some text with keyboard.
+`Make-color` provides a convenient (IMHO) way for finding a suitable
+color by updating a color of some text with keyboard.
 
 Basically, you press <kbd>r</kbd>/<kbd>g</kbd>/<kbd>b</kbd>/... keys and
 see how a probing region of text changes its foreground/background color
 (red/green/blue/... components).
-
-*Note:* The package and a custom group are called `make-color`;
-all functions and variables have a prefix `macol-`.
 
 ## Installation
 
@@ -24,17 +21,18 @@ all functions and variables have a prefix `macol-`.
 - Add autoloads for the main functions:
 
   ```lisp
-  (autoload 'macol-make-color "make-color" nil t)
-  (autoload 'macol-switch-to-buffer "make-color" nil t)
+  (autoload 'make-color "make-color" nil t)
+  (autoload 'make-color-switch-to-buffer "make-color" nil t)
   ```
 
 ### MELPA
 
-not yet
+The package can be installed from [MELPA](http://melpa.milkbox.net).
+(with `M-x package-install` or `M-x list-packages`).
 
 ## Usage
 
-Shortly: `M-x macol-make-color` and press
+Shortly: `M-x make-color` and press
 <kbd>r</kbd>/<kbd>R</kbd>/<kbd>g</kbd>/<kbd>G</kbd>/... keys (see
 [below](#key-bindings)).
 
@@ -42,19 +40,19 @@ More detailed description:
 
 1. (Optional) Select any region (it will be used as a sample, so you may
    want to select a colorful text, for example a piece of elisp code).
-2. `M-x macol-make-color` or `M-x macol-switch-to-buffer` to make a
-   buffer in `macol-mode`.
+2. `M-x make-color` or `M-x make-color-switch-to-buffer` to make a
+   buffer in `make-color-mode`.
 3. (Optional if *step 1* was omitted) Select a text a color of which you
    want to change and press <kbd>n</kbd> (stands for "**n**ew probing region").
 4. Press keys to change a color of the probing region (see
    [below](#key-bindings)).
 
-Macol buffer is not read-only, so you can "cut and paste" (I mean "kill
-and yank") text there as usual, as well as undo the changes.
+MakeColor buffer is not read-only, so you can "cut and paste" (I mean
+"kill and yank") text there as usual, as well as undo the changes.
 
 ### Key bindings
 
-Key bindings in `macol-mode` (can be explored with <kbd>C-h m</kbd>):
+Key bindings in `make-color-mode` (can be explored with <kbd>C-h m</kbd>):
 
 - <kbd>r</kbd>/<kbd>R</kbd>, <kbd>g</kbd>/<kbd>G</kbd>,
   <kbd>b</kbd>/<kbd>B</kbd> – decrease/increase red, green, blue
@@ -71,5 +69,7 @@ Key bindings in `macol-mode` (can be explored with <kbd>C-h m</kbd>):
 - <kbd>f</kbd>/<kbd>d</kbd>, <kbd>t</kbd> – switch between changing
   foreground/background color
 - <kbd>k</kbd> – put current color into kill-ring
+- <kbd>F</kbd>/<kbd>D</kbd> – put foreground/background color at point
+  into kill-ring
 - <kbd>u</kbd> – undo
 

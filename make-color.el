@@ -4,7 +4,7 @@
 
 ;; Author: Alex Kost <alezost@gmail.com>
 ;; Created: 9 Jan 2014
-;; Version: 0.2
+;; Version: 0.3
 ;; URL: http://github.com/alezost/make-color.el
 ;; Keywords: color
 
@@ -29,12 +29,12 @@
 ;; To manually install the package, copy this file to a directory from
 ;; `load-path' and add the following to your init-file:
 ;;
-;;   (autoload 'macol-make-color "make-color" nil t)
-;;   (autoload 'macol-switch-to-buffer "make-color" nil t)
+;;   (autoload 'make-color "make-color" nil t)
+;;   (autoload 'make-color-switch-to-buffer "make-color" nil t)
 
-;; Usage: select any region and call "M-x macol-make-color".  You will
-;; see a buffer in `macol-mode'.  Select some text in it and press "n"
-;; to set this text for colorizing.  Now you can modify a color with the
+;; Usage: select any region and call "M-x make-color".  You will see a
+;; buffer in `make-color-mode'.  Select some text in it and press "n" to
+;; set this text for colorizing.  Now you can modify a color with the
 ;; following keys:
 ;;
 ;;   - r/R, g/G, b/B - decrease/increase red, green, blue components
@@ -48,11 +48,8 @@
 ;; colors with "t".  See mode description ("C-h m") for other key
 ;; bindings.
 
-;; Macol buffer is not read-only, so you can yank and delete text and
-;; undo the changes as you always do.
-
-;; Note: The package and a custom group are called "make-color";
-;; all functions and variables have a prefix "macol-".
+;; Buffer in `make-color-mode' is not read-only, so you can yank and
+;; delete text and undo the changes as you always do.
 
 ;; For full description, see <http://github.com/alezost/make-color.el>.
 
@@ -65,71 +62,73 @@
   "Find suitable color by modifying a text sample."
   :group 'faces)
 
-(defcustom macol-shift-step 0.02
+(defcustom make-color-shift-step 0.02
   "Step of shifting a component of the current color.
 Should be a floating number from 0.0 to 1.0."
   :type 'float
   :group 'make-color)
 
-(defcustom macol-sample
+(defcustom make-color-sample
   "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet
 consectetur adipisci velit.
                                          Marcus Tullius Cicero"
   "Default text sample used for probing a color.
-See also `macol-sample-beg' and `macol-sample-end'."
+See also `make-color-sample-beg' and `make-color-sample-end'."
   :type 'string
   :group 'make-color)
 
-(defcustom macol-sample-beg 133
-  "Start position of text in `macol-sample' for probing a color.
+(defcustom make-color-sample-beg 133
+  "Start position of text in `make-color-sample' for probing a color.
 If nil, start probing text from the beginning of the sample."
   :type '(choice integer (const nil))
   :group 'make-color)
 
-(defcustom macol-sample-end 154
-  "End position of text in `macol-sample' for probing a color.
+(defcustom make-color-sample-end 154
+  "End position of text in `make-color-sample' for probing a color.
 If nil, end probing text in the end of the sample."
   :type '(choice integer (const nil))
   :group 'make-color)
 
-(defcustom macol-buffer-name "*macol*"
-  "Default name of the macol buffer."
+(defcustom make-color-buffer-name "*Make Color*"
+  "Default name of the make-color buffer."
   :type 'string
   :group 'make-color)
 
-(defcustom macol-use-single-buffer t
-  "If nil, create a new macol buffer for each `macol-make-color' call.
-If non-nil, use only one macol buffer."
+(defcustom make-color-use-single-buffer t
+  "If nil, create a new make-color buffer for each `make-color' call.
+If non-nil, use only one make-color buffer."
   :type 'boolean
   :group 'make-color)
 
-(defcustom macol-show-color t
+(defcustom make-color-show-color t
   "If non-nil, show message in minibuffer after changing current color."
   :type 'boolean
   :group 'make-color)
 
-(defcustom macol-face-keyword :foreground
+(defcustom make-color-face-keyword :foreground
   "Default face parameter for colorizing."
   :type '(choice
           (const :tag "Foreground" :foreground)
           (const :tag "Background" :background))
   :group 'make-color)
 
-(defcustom macol-new-color-after-region-change t
+(defcustom make-color-new-color-after-region-change t
   "What color should be used after changing the probing region.
 If nil, current color stays the same.
 If non-nil, current color is set to the color of the probing region."
   :type 'boolean
   :group 'make-color)
 
-(defcustom macol-get-color-function 'macol-get-color-at-pos
+(defcustom make-color-get-color-function
+  'make-color-get-color-at-pos
   "Function used for getting a color of a character.
 Should accept 2 arguments: a symbol or keyword
 `foreground'/`background' and a point position."
   :type 'function
   :group 'make-color)
 
-(defcustom macol-set-color-function 'macol-set-color
+(defcustom make-color-set-color-function
+  'make-color-set-color
   "Function used for setting a color of a region.
 Should accept 4 arguments:
   - symbol or keyword `foreground'/`background',
@@ -139,18 +138,18 @@ Should accept 4 arguments:
   :type 'function
   :group 'make-color)
 
-(defvar macol-mode-map
+(defvar make-color-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-j" 'newline)
-    (define-key map "\C-m" 'macol-set-current-color)
-    (define-key map "n" 'macol-set-probing-region)
-    (define-key map "p" 'macol-set-step)
-    (define-key map "f" 'macol-use-foreground)
-    (define-key map "d" 'macol-use-background)
-    (define-key map "t" 'macol-toggle-face-parameter)
-    (define-key map "k" 'macol-current-color-to-kill-ring)
-    (define-key map "F" 'macol-foreground-color-to-kill-ring)
-    (define-key map "D" 'macol-background-color-to-kill-ring)
+    (define-key map "\C-m" 'make-color-set-current-color)
+    (define-key map "n" 'make-color-set-probing-region)
+    (define-key map "p" 'make-color-set-step)
+    (define-key map "f" 'make-color-use-foreground)
+    (define-key map "d" 'make-color-use-background)
+    (define-key map "t" 'make-color-toggle-face-parameter)
+    (define-key map "k" 'make-color-current-color-to-kill-ring)
+    (define-key map "F" 'make-color-foreground-color-to-kill-ring)
+    (define-key map "D" 'make-color-background-color-to-kill-ring)
     (define-key map "u" 'undo)
     (define-key map "q" 'bury-buffer)
     map)
@@ -159,7 +158,7 @@ Should accept 4 arguments:
 
 ;;; Changing colors
 
-(defun macol-+ (nums &optional overlap)
+(defun make-color-+ (nums &optional overlap)
   "Return sum of float numbers from 0.0 to 1.0 from NUMS list.
 Returning value is always between 0.0 and 1.0 inclusive.
 If OVERLAP is non-nil and the sum exceeds the limits, oh god i
@@ -172,32 +171,36 @@ can't formulate it, look at the code."
             (+ 1 frac)))
       (color-clamp res))))
 
-(cl-defun macol-shift-color-by-rgb (color &key (red 0) (green 0) (blue 0))
-  "Return RGB color by modifying COLOR with RED/GREEN/BLUE values.
+(cl-defun make-color-shift-color-by-rgb
+    (color &key (red 0) (green 0) (blue 0))
+  "Return RGB color by modifying COLOR with RED/GREEN/BLUE.
 COLOR and returning value are lists in a form (R G B).
 RED/GREEN/BLUE are numbers from 0.0 to 1.0."
-  (list (macol-+ (list (car      color) red))
-        (macol-+ (list (cadr     color) green))
-        (macol-+ (list (cl-caddr color) blue))))
+  (list (make-color-+ (list (car      color) red))
+        (make-color-+ (list (cadr     color) green))
+        (make-color-+ (list (cl-caddr color) blue))))
 
-(cl-defun macol-shift-color-by-hsl (color &key (hue 0) (saturation 0) (luminance 0))
-  "Return RGB color by modifying COLOR with HUE/SATURATION/LUMINANCE values.
+(cl-defun make-color-shift-color-by-hsl
+    (color &key (hue 0) (saturation 0) (luminance 0))
+  "Return RGB color by modifying COLOR with HUE/SATURATION/LUMINANCE.
 COLOR and returning value are lists in a form (R G B).
 HUE/SATURATION/LUMINANCE are numbers from 0.0 to 1.0."
   (let ((hsl (apply 'color-rgb-to-hsl color)))
     (color-hsl-to-rgb
-     (macol-+ (list (car      hsl) hue) 'overlap)
-     (macol-+ (list (cadr     hsl) saturation))
-     (macol-+ (list (cl-caddr hsl) luminance)))))
+     (make-color-+ (list (car      hsl) hue) 'overlap)
+     (make-color-+ (list (cadr     hsl) saturation))
+     (make-color-+ (list (cl-caddr hsl) luminance)))))
 
 
 ;;; Shifting current color
 
-(defvar macol-current-color nil
+(defvar make-color-current-color nil
   "Current color - a list in a form (R G B).")
 
-(defmacro macol-define-shift-function (name direction sign-fun color-fun key &rest components)
-  "Define function `macol-DIRECTION-NAME' for shifting current color.
+(defmacro make-color-define-shift-function
+  (name direction sign-fun color-fun key &rest components)
+  "Define function for shifting current color.
+Function name is `make-color-DIRECTION-NAME'.
 
 NAME is a unique part of function name like \"red\" or \"hue\".
 Can be a string or a symbol.
@@ -208,90 +211,93 @@ description (\"increase\" or \"decrease\").
 SIGN-FUN is a function used for direction of shifting (`+' or `-').
 
 COLOR-FUN is a function used for modifying current color
-\(`macol-shift-color-by-rgb' or `macol-shift-color-by-hsl').
+\(`make-color-shift-color-by-rgb' or
+`make-color-shift-color-by-hsl').
 
-If KEY is non-nil, a binding with KEY will be defined in `macol-mode-map'.
+If KEY is non-nil, a binding with KEY will be defined in
+`make-color-mode-map'.
 
 Each component from COMPONENTS list is one of the keywords
 accepted by COLOR-FUN.  Specified COMPONENTS of the current color
 will be shifted by the defined function."
-  (let* ((fun-name (intern (format "macol-%s-%s" direction name)))
-         (fun-doc (format "%s %s component of the current color by VAL.\nIf VAL is nil, use `macol-shift-step'."
-                          (capitalize direction) name))
+  (let* ((fun-name (intern (format "make-color-%s-%s" direction name)))
+         (fun-doc (concat (format "%s %s component of the current color by VAL."
+                                  (capitalize direction) name)
+                          "\nIf VAL is nil, use `make-color-shift-step'."))
          (fun-def
           `(defun ,fun-name (&optional val)
              ,fun-doc
              (interactive)
              (let ((color
                     (apply ,color-fun
-                           (or macol-current-color '(0 0 0))
+                           (or make-color-current-color '(0 0 0))
                            (cl-mapcan
                             (lambda (elt)
                               (list elt
                                     (if val
                                         (funcall ,sign-fun val)
-                                      (funcall ,sign-fun macol-shift-step))))
+                                      (funcall ,sign-fun make-color-shift-step))))
                             ',components))))
-               (macol-update-sample color)))))
+               (make-color-update-sample color)))))
     (if key
-        `(progn ,fun-def (define-key macol-mode-map ,key ',fun-name))
+        `(progn ,fun-def (define-key make-color-mode-map ,key ',fun-name))
       fun-def)))
 
-(defmacro macol-define-shift-functions (model name key &rest components)
+(defmacro make-color-define-shift-functions (model name key &rest components)
   "Define functions for increasing/decreasing current color.
 
-Define 2 functions: `macol-increase-NAME' and
-`macol-decrease-NAME' with optional argument VAL.
+Define 2 functions: `make-color-increase-NAME' and
+`make-color-decrease-NAME' with optional argument VAL.
 
 MODEL is a string \"rgb\" or \"hsl\" for choosing
-`macol-shift-color-by-rgb' or `macol-shift-color-by-hsl'.
+`make-color-shift-color-by-rgb' or `make-color-shift-color-by-hsl'.
 
 KEY should be nil or a string of one letter.  If KEY is non-nil,
 bindings for defined functions will be defined in
-`macol-mode-map'.  Up-case letter will be used for increasing
+`make-color-mode-map'.  Up-case letter will be used for increasing
 function, down-case letter - for decreasing function.
 
-For other args, see `macol-define-shift-function'."
-  (let ((shift-fun (intern (concat "macol-shift-color-by-" model))))
+For other args, see `make-color-define-shift-function'."
+  (let ((shift-fun (intern (concat "make-color-shift-color-by-" model))))
     `(progn
-       (macol-define-shift-function
+       (make-color-define-shift-function
         ,name "increase" #'+ #',shift-fun ,(upcase key) ,@components)
-       (macol-define-shift-function
+       (make-color-define-shift-function
         ,name "decrease" #'- #',shift-fun ,(downcase key) ,@components))))
 
-(macol-define-shift-functions "rgb" "red"        "r" :red)
-(macol-define-shift-functions "rgb" "green"      "g" :green)
-(macol-define-shift-functions "rgb" "blue"       "b" :blue)
-(macol-define-shift-functions "rgb" "cyan"       "c" :green :blue)
-(macol-define-shift-functions "rgb" "magenta"    "m" :blue  :red)
-(macol-define-shift-functions "rgb" "yellow"     "y" :red   :green)
+(make-color-define-shift-functions "rgb" "red"        "r" :red)
+(make-color-define-shift-functions "rgb" "green"      "g" :green)
+(make-color-define-shift-functions "rgb" "blue"       "b" :blue)
+(make-color-define-shift-functions "rgb" "cyan"       "c" :green :blue)
+(make-color-define-shift-functions "rgb" "magenta"    "m" :blue  :red)
+(make-color-define-shift-functions "rgb" "yellow"     "y" :red   :green)
 
-(macol-define-shift-functions "hsl" "hue"        "h" :hue)
-(macol-define-shift-functions "hsl" "saturation" "s" :saturation)
-(macol-define-shift-functions "hsl" "luminance"  "l" :luminance)
+(make-color-define-shift-functions "hsl" "hue"        "h" :hue)
+(make-color-define-shift-functions "hsl" "saturation" "s" :saturation)
+(make-color-define-shift-functions "hsl" "luminance"  "l" :luminance)
 
 
-;;; Macol buffers
+;;; MakeColor buffers
 
 ;;;###autoload
-(defun macol-switch-to-buffer (&optional arg)
-  "Switch to macol buffer or create one.
-With prefix, make a new macol buffer unconditionally."
+(defun make-color-switch-to-buffer (&optional arg)
+  "Switch to make-color buffer or create one.
+With prefix, make a new make-color buffer unconditionally."
   (interactive "P")
-  (let ((bufs (macol-get-buffers))
+  (let ((bufs (make-color-get-buffers))
         buf)
     (if (or arg (null bufs))
-        (macol-make-color)
-      ;; delete current macol buffer from `bufs'
-      (when (eq major-mode 'macol-mode)
+        (make-color)
+      ;; delete current make-color buffer from `bufs'
+      (when (eq major-mode 'make-color-mode)
         (setq bufs (delete (current-buffer) bufs)))
       (cond
        ((null bufs)
-        (message "This is a single macol buffer."))
-       ((null (cdr bufs))   ; there is only one non-current macol buffer
+        (message "This is a single make-color buffer."))
+       ((null (cdr bufs))   ; there is only one non-current buffer
         (setq buf (car bufs)))
        (t
-        (setq buf (completing-read "Macol buffer: "
+        (setq buf (completing-read "MakeColor buffer: "
                                    (mapcar #'buffer-name bufs)
                                    nil t))))
       (when buf
@@ -300,22 +306,22 @@ With prefix, make a new macol buffer unconditionally."
               (select-window win)
             (pop-to-buffer-same-window (get-buffer buf))))))))
 
-(defun macol-get-buffers ()
-  "Return a list of macol buffers."
-  (let ((re (regexp-quote macol-buffer-name)))
+(defun make-color-get-buffers ()
+  "Return a list of make-color buffers."
+  (let ((re (regexp-quote make-color-buffer-name)))
     (cl-remove-if-not
      (lambda (buf) (string-match re (buffer-name buf)))
      (buffer-list))))
 
-(defun macol-get-buffer (&optional clear)
-  "Return macol buffer.
+(defun make-color-get-buffer (&optional clear)
+  "Return make-color buffer.
 If CLEAR is non-nil, delete contents of the buffer.
-If `macol-use-single-buffer' is nil, create a new macol buffer,
+If `make-color-use-single-buffer' is nil, create a new buffer,
 otherwise return an existing one."
   (let ((buf (get-buffer-create
-              (if macol-use-single-buffer
-                  macol-buffer-name
-                (generate-new-buffer-name macol-buffer-name)))))
+              (if make-color-use-single-buffer
+                  make-color-buffer-name
+                (generate-new-buffer-name make-color-buffer-name)))))
     (when clear
       (with-current-buffer buf (erase-buffer)))
     buf))
@@ -329,14 +335,14 @@ otherwise return an existing one."
 ;; by `facemenu-set-foreground'/`facemenu-set-background' the original
 ;; functions return nil, so we need some code for getting a color.
 
-(defun macol-set-color (param color beg end)
+(defun make-color-set-color (param color beg end)
   "Set color of the text between BEG and END.
 Param is a symbol or keyword `foreground' or `background'.
 COLOR should be a list in a form (R G B)."
-  (facemenu-add-face (list (list (macol-keyword param) color))
+  (facemenu-add-face (list (list (make-color-keyword param) color))
                      beg end))
 
-(defun macol-get-color-from-face-spec (param spec)
+(defun make-color-get-color-from-face-spec (param spec)
   "Return color from face specification SPEC.
 PARAM is a keyword `:foreground' or `:background'.
 SPEC can be a face name, a property list of face attributes or a
@@ -353,7 +359,7 @@ If PARAM is not found in SPEC, return nil."
         (plist-get spec param)
       (let (res)
         (cl-loop for elt in spec
-                 do (setq res (macol-get-color-from-face-spec
+                 do (setq res (make-color-get-color-from-face-spec
                                param elt))
                  until res)
         res)))
@@ -361,173 +367,174 @@ If PARAM is not found in SPEC, return nil."
     (message "Ignoring unknown face specification '%s'." spec)
     nil)))
 
-(defun macol-get-color-at-pos (param &optional pos)
+(defun make-color-get-color-at-pos (param &optional pos)
   "Return color of a character at position POS.
 PARAM is a symbol or keyword `foreground' or `background'.
 If POS is not specified, use current point positiion."
-  (let ((param (macol-keyword param))
+  (let ((param (make-color-keyword param))
         (faceprop (get-char-property (or pos (point)) 'face)))
     (or (and faceprop
-             (macol-get-color-from-face-spec param faceprop))
+             (make-color-get-color-from-face-spec param faceprop))
         ;; if color was not found, use default face
         (face-attribute 'default param))))
 
-(defun macol-foreground-color-at-point ()
+(defun make-color-foreground-color-at-point ()
   "Return foreground color of the character at point."
-  (macol-get-color-at-pos :foreground (point)))
+  (make-color-get-color-at-pos :foreground (point)))
 
-(defun macol-background-color-at-point ()
+(defun make-color-background-color-at-point ()
   "Return background color of the character at point."
-  (macol-get-color-at-pos :background (point)))
+  (make-color-get-color-at-pos :background (point)))
 
 
 ;;; UI
 
-(defvar macol-probing-region-bounds nil
+(defvar make-color-probing-region-bounds nil
   "Cons cell of start and end positions of a probing text.")
 
-(define-derived-mode macol-mode nil "MaCol"
+(define-derived-mode make-color-mode nil "MakeColor"
   "Major mode for making color.
 
-\\{macol-mode-map}"
-  (make-local-variable 'macol-current-color)
-  (make-local-variable 'macol-probing-region-bounds)
-  (make-local-variable 'macol-shift-step)
-  (make-local-variable 'macol-face-keyword))
+\\{make-color-mode-map}"
+  (make-local-variable 'make-color-current-color)
+  (make-local-variable 'make-color-probing-region-bounds)
+  (make-local-variable 'make-color-shift-step)
+  (make-local-variable 'make-color-face-keyword))
 
-(defun macol-check-mode (&optional buffer)
-  "Raise error if BUFFER is not in `macol-mode'.
+(defun make-color-check-mode (&optional buffer)
+  "Raise error if BUFFER is not in `make-color-mode'.
 If BUFFER is nil, use current buffer."
   (with-current-buffer (or buffer (current-buffer))
-    (or (eq major-mode 'macol-mode)
-        (error "Current buffer should be in macol-mode"))))
+    (or (eq major-mode 'make-color-mode)
+        (error "Current buffer should be in make-color-mode"))))
 
-(defun macol-keyword (symbol)
+(defun make-color-keyword (symbol)
   "Return a keyword same as SYMBOL but with leading `:'.
 If SYMBOL is a keyword, return it."
   (if (keywordp symbol)
       symbol
     (make-symbol (concat ":" (symbol-name symbol)))))
 
-(defun macol-unkeyword (kw)
+(defun make-color-unkeyword (kw)
   "Return a symbol same as keyword KW but without leading `:'."
   (or (keywordp kw)
       (error "Symbol `%s' is not a keyword" kw))
   (make-symbol (substring (symbol-name kw) 1)))
 
-(defun macol-update-sample (color &optional buffer)
-  "Update current color and text sample in the macol BUFFER with COLOR.
+(defun make-color-update-sample (color &optional buffer)
+  "Update current color and text sample in the BUFFER with COLOR.
 COLOR should be a list in a form (R G B).
 If BUFFER is nil, use current buffer."
-  (macol-check-mode buffer)
+  (make-color-check-mode buffer)
   (with-current-buffer (or buffer (current-buffer))
-    (if macol-probing-region-bounds
+    (if make-color-probing-region-bounds
         ;; if bounds are nils, use the whole sample
-        (let ((beg (or (car macol-probing-region-bounds)
+        (let ((beg (or (car make-color-probing-region-bounds)
                        (point-min)))
-              (end (or (cdr macol-probing-region-bounds)
+              (end (or (cdr make-color-probing-region-bounds)
                        (point-max))))
-          (setq macol-current-color color
+          (setq make-color-current-color color
                 color (apply 'color-rgb-to-hex color))
-          (funcall macol-set-color-function
-                   macol-face-keyword color beg end)
-          (and macol-show-color
+          (funcall make-color-set-color-function
+                   make-color-face-keyword color beg end)
+          (and make-color-show-color
                (message "Current color: %s" color)))
-      (macol-set-probing-region))))
+      (make-color-set-probing-region))))
 
 ;;;###autoload
-(defun macol-make-color ()
+(defun make-color ()
   "Begin to make color by modifying a text sample.
 If region is active, use it as the sample."
   (interactive)
-  ;; `sample' is the whole text yanking in macol buffer;
+  ;; `sample' is the whole text yanking in make-color buffer;
   ;; `region' is a part of this text used for colorizing
   (cl-multiple-value-bind (sample region)
       (if (region-active-p)
           (list (buffer-substring (region-beginning) (region-end))
                 nil)
-        (list macol-sample
-              (cons macol-sample-beg macol-sample-end)))
-    (pop-to-buffer-same-window (macol-get-buffer 'clear))
-    (macol-mode)
+        (list make-color-sample
+              (cons make-color-sample-beg make-color-sample-end)))
+    (pop-to-buffer-same-window (make-color-get-buffer 'clear))
+    (make-color-mode)
     (insert sample)
     (goto-char (point-min))
-    (setq-local macol-probing-region-bounds region)
-    (macol-update-current-color-maybe)))
+    (setq-local make-color-probing-region-bounds region)
+    (make-color-update-current-color-maybe)))
 
-(defun macol-set-step (step)
-  "Set `macol-shift-step' to a value STEP.
+(defun make-color-set-step (step)
+  "Set `make-color-shift-step' to a value STEP.
 Interactively, prompt for STEP."
   (interactive
-   (list (read-number "Set step to: " macol-shift-step)))
+   (list (read-number "Set step to: " make-color-shift-step)))
   (if (and (floatp step)
            (>= 1.0 step)
            (<= 0.0 step))
-      (setq macol-shift-step step)
+      (setq make-color-shift-step step)
     (error "Should be a value from 0.0 to 1.0")))
 
-(defun macol-set-probing-region ()
+(defun make-color-set-probing-region ()
   "Use current region for colorizing."
   (interactive)
-  (macol-check-mode)
+  (make-color-check-mode)
   (if (region-active-p)
-      (progn (setq macol-probing-region-bounds
+      (progn (setq make-color-probing-region-bounds
                    (cons (region-beginning) (region-end)))
-             (macol-update-current-color-maybe)
+             (make-color-update-current-color-maybe)
              (deactivate-mark)
              (message "The region was set for color probing."))
     (if (y-or-n-p (concat "No active region. Use the whole sample for colorizing?"))
-        (progn (setq macol-probing-region-bounds (cons nil nil))
-               (macol-update-current-color-maybe))
+        (progn (setq make-color-probing-region-bounds (cons nil nil))
+               (make-color-update-current-color-maybe))
       ;; TODO do not hard-code "n"
       (message "Select a region for colorizing and press \"n\"."))))
 
-(defun macol-set-current-color ()
+(defun make-color-set-current-color ()
   "Set current color to the prompted value and update probing region."
   (interactive)
   (let ((color (read-color
                 (concat "Color"
-                        (and macol-current-color
+                        (and make-color-current-color
                              (format " (current: %s)"
                                      (apply 'color-rgb-to-hex
-                                            macol-current-color)))
+                                            make-color-current-color)))
                         ": "))))
     (unless (string= color "")
-      (macol-update-sample (color-name-to-rgb color)))))
+      (make-color-update-sample (color-name-to-rgb color)))))
 
-(defun macol-update-current-color-maybe ()
-  "Update current color according to `macol-new-color-after-region-change'."
-  (when macol-new-color-after-region-change
+(defun make-color-update-current-color-maybe ()
+  "Update current color if needed.
+See `make-color-new-color-after-region-change'."
+  (when make-color-new-color-after-region-change
     (setq
-     macol-current-color
+     make-color-current-color
      (color-name-to-rgb
       (save-excursion
-        (goto-char (or (car macol-probing-region-bounds)
+        (goto-char (or (car make-color-probing-region-bounds)
                        0))
-        (macol-get-color-at-pos macol-face-keyword))))))
+        (make-color-get-color-at-pos make-color-face-keyword))))))
 
-(defun macol-use-foreground ()
+(defun make-color-use-foreground ()
   "Set foreground as the parameter for further changing."
   (interactive)
-  (setq-local macol-face-keyword :foreground)
-  (macol-update-current-color-maybe)
+  (setq-local make-color-face-keyword :foreground)
+  (make-color-update-current-color-maybe)
   (message "Foreground has been set for colorizing."))
 
-(defun macol-use-background ()
+(defun make-color-use-background ()
   "Set background as the parameter for further changing."
   (interactive)
-  (setq-local macol-face-keyword :background)
-  (macol-update-current-color-maybe)
+  (setq-local make-color-face-keyword :background)
+  (make-color-update-current-color-maybe)
   (message "Background has been set for colorizing."))
 
-(defun macol-toggle-face-parameter ()
+(defun make-color-toggle-face-parameter ()
   "Switch between setting foreground and background."
   (interactive)
-  (if (equal macol-face-keyword :foreground)
-      (macol-use-background)
-    (macol-use-foreground)))
+  (if (equal make-color-face-keyword :foreground)
+      (make-color-use-background)
+    (make-color-use-foreground)))
 
-(defun macol-color-to-kill-ring (color)
+(defun make-color-to-kill-ring (color)
   "Add color value of COLOR to the `kill-ring'.
 COLOR can be a string (color name or a hex value) or a list in a
 form (R G B)."
@@ -536,24 +543,24 @@ form (R G B)."
   (kill-new color)
   (message "Color '%s' has been put into kill-ring." color))
 
-(defun macol-current-color-to-kill-ring ()
+(defun make-color-current-color-to-kill-ring ()
   "Add current color to the `kill-ring'."
   (interactive)
-  (or macol-current-color
-      (error "macol-current-color is nil"))
-  (macol-color-to-kill-ring macol-current-color))
+  (or make-color-current-color
+      (error "make-color-current-color is nil"))
+  (make-color-to-kill-ring make-color-current-color))
 
 ;;;###autoload
-(defun macol-foreground-color-to-kill-ring ()
+(defun make-color-foreground-color-to-kill-ring ()
   "Add foreground color at point to the `kill-ring'."
   (interactive)
-  (macol-color-to-kill-ring (macol-foreground-color-at-point)))
+  (make-color-to-kill-ring (make-color-foreground-color-at-point)))
 
 ;;;###autoload
-(defun macol-background-color-to-kill-ring ()
+(defun make-color-background-color-to-kill-ring ()
   "Add background color at point to the `kill-ring'."
   (interactive)
-  (macol-color-to-kill-ring (macol-background-color-at-point)))
+  (make-color-to-kill-ring (make-color-background-color-at-point)))
 
 (provide 'make-color)
 
