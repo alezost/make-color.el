@@ -65,6 +65,7 @@ Key bindings in `make-color-mode` (can be explored with <kbd>C-h m</kbd>):
   (HSL model)
 - <kbd>RET</kbd> – change current color (prompt for a value)
 - <kbd>n</kbd> – set new probing region
+- <kbd>SPC</kbd> – highlight current probing region
 - <kbd>p</kbd> – change a step of components shifting
 - <kbd>f</kbd>/<kbd>d</kbd>, <kbd>t</kbd> – switch between changing
   foreground/background color
