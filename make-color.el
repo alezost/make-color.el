@@ -392,6 +392,20 @@ If POS is not specified, use current point positiion."
 (defvar make-color-probing-region-bounds nil
   "Cons cell of start and end positions of a probing text.")
 
+(defun make-color-get-probing-region-bounds ()
+  "Return cons cell of start and end positions of a probing region.
+Return nil if probing region is not defined."
+  (when make-color-probing-region-bounds
+    ;; if bounds are nils, use the whole sample
+    (cons (or (car make-color-probing-region-bounds)
+              (point-min))
+          (or (cdr make-color-probing-region-bounds)
+              (point-max)))))
+
+(defun make-color-set-probing-region-bounds (beg end)
+  "Set start and end positions of a probing region to BEG and END."
+  (setq make-color-probing-region-bounds (cons beg end)))
+
 (define-derived-mode make-color-mode nil "MakeColor"
   "Major mode for making color.
 
@@ -427,19 +441,17 @@ COLOR should be a list in a form (R G B).
 If BUFFER is nil, use current buffer."
   (make-color-check-mode buffer)
   (with-current-buffer (or buffer (current-buffer))
-    (if make-color-probing-region-bounds
-        ;; if bounds are nils, use the whole sample
-        (let ((beg (or (car make-color-probing-region-bounds)
-                       (point-min)))
-              (end (or (cdr make-color-probing-region-bounds)
-                       (point-max))))
-          (setq make-color-current-color color
-                color (apply 'color-rgb-to-hex color))
-          (funcall make-color-set-color-function
-                   make-color-face-keyword color beg end)
-          (and make-color-show-color
-               (message "Current color: %s" color)))
-      (make-color-set-probing-region))))
+    (let ((bounds (make-color-get-probing-region-bounds)))
+      (if bounds
+          (progn
+            (setq make-color-current-color color
+                  color (apply 'color-rgb-to-hex color))
+            (funcall make-color-set-color-function
+                     make-color-face-keyword color
+                     (car bounds) (cdr bounds))
+            (and make-color-show-color
+                 (message "Current color: %s" color)))
+        (make-color-set-probing-region)))))
 
 ;;;###autoload
 (defun make-color ()
@@ -448,17 +460,18 @@ If region is active, use it as the sample."
   (interactive)
   ;; `sample' is the whole text yanking in make-color buffer;
   ;; `region' is a part of this text used for colorizing
-  (cl-multiple-value-bind (sample region)
-      (if (region-active-p)
-          (list (buffer-substring (region-beginning) (region-end))
-                nil)
-        (list make-color-sample
-              (cons make-color-sample-beg make-color-sample-end)))
+  (let (sample region)
+    (if (region-active-p)
+        (setq sample (buffer-substring (region-beginning) (region-end)))
+      (setq sample make-color-sample
+            region (cons make-color-sample-beg make-color-sample-end)))
     (pop-to-buffer-same-window (make-color-get-buffer 'clear))
     (make-color-mode)
     (insert sample)
     (goto-char (point-min))
-    (setq-local make-color-probing-region-bounds region)
+    (and region
+         (make-color-set-probing-region-bounds
+          (car region) (cdr region)))
     (make-color-update-current-color-maybe)))
 
 (defun make-color-set-step (step)
@@ -477,13 +490,13 @@ Interactively, prompt for STEP."
   (interactive)
   (make-color-check-mode)
   (if (region-active-p)
-      (progn (setq make-color-probing-region-bounds
-                   (cons (region-beginning) (region-end)))
+      (progn (make-color-set-probing-region-bounds
+              (region-beginning) (region-end))
              (make-color-update-current-color-maybe)
              (deactivate-mark)
              (message "The region was set for color probing."))
     (if (y-or-n-p (concat "No active region. Use the whole sample for colorizing?"))
-        (progn (setq make-color-probing-region-bounds (cons nil nil))
+        (progn (make-color-set-probing-region-bounds nil nil)
                (make-color-update-current-color-maybe))
       ;; TODO do not hard-code "n"
       (message "Select a region for colorizing and press \"n\"."))))
@@ -505,13 +518,14 @@ Interactively, prompt for STEP."
   "Update current color if needed.
 See `make-color-new-color-after-region-change'."
   (when make-color-new-color-after-region-change
-    (setq
-     make-color-current-color
-     (color-name-to-rgb
-      (save-excursion
-        (goto-char (or (car make-color-probing-region-bounds)
-                       0))
-        (make-color-get-color-at-pos make-color-face-keyword))))))
+    (let ((bounds (make-color-get-probing-region-bounds)))
+      (and bounds
+           (setq make-color-current-color
+                 (color-name-to-rgb
+                  (save-excursion
+                    (goto-char (car bounds))
+                    (make-color-get-color-at-pos
+                     make-color-face-keyword))))))))
 
 (defun make-color-use-foreground ()
   "Set foreground as the parameter for further changing."
