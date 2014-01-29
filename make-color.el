@@ -150,6 +150,7 @@ Should accept 4 arguments:
     (define-key map "k" 'make-color-current-color-to-kill-ring)
     (define-key map "F" 'make-color-foreground-color-to-kill-ring)
     (define-key map "D" 'make-color-background-color-to-kill-ring)
+    (define-key map " " 'make-color-highlight-current-region)
     (define-key map "u" 'undo)
     (define-key map "q" 'bury-buffer)
     map)
@@ -385,6 +386,59 @@ If POS is not specified, use current point positiion."
 (defun make-color-background-color-at-point ()
   "Return background color of the character at point."
   (make-color-get-color-at-pos :background (point)))
+
+
+;;; Highlighting regions
+
+(defface make-color-highlight
+  '((t :inherit region))
+  "Face for highlighted region."
+  :group 'make-color)
+
+(defcustom make-color-highlight-time 0.7
+  "Time (in seconds) for keeping a region highlighted."
+  :type 'number
+  :group 'make-color)
+
+(defvar make-color-highlight-wait-function 'run-at-time
+  "Function used for waiting until highlighting will be removed.
+Can be either `sit-for' or `run-at-time'.")
+
+(defvar make-color-highlight-overlay nil
+  "Overlay used for highlighting a region.")
+
+(defun make-color-delete-highlight-overlay ()
+  "Delete overlay for highlighting a region."
+  (delete-overlay make-color-highlight-overlay))
+
+(defun make-color-highlight-region (beg end)
+  "Highlight the text between BEG and END temporarily.
+Use `make-color-highlight-time' variable and
+`make-color-highlight' face."
+  ;; do nothing if highlighting is in progress
+  (when (or (null (overlayp make-color-highlight-overlay))
+            (null (overlay-buffer make-color-highlight-overlay)))
+    (setq make-color-highlight-overlay (make-overlay beg end))
+    (overlay-put make-color-highlight-overlay
+                 'face 'make-color-highlight)
+    (cl-case make-color-highlight-wait-function
+      (sit-for
+       (sit-for make-color-highlight-time)
+       (make-color-delete-highlight-overlay))
+      (run-at-time
+       (run-at-time make-color-highlight-time nil
+                    'make-color-delete-highlight-overlay))
+      (t (error "Unknown function for waiting %s"
+                make-color-highlight-wait-function)))))
+
+(defun make-color-highlight-current-region ()
+  "Highlight current probing region.
+See `make-color-highlight-region' for details."
+  (interactive)
+  (let ((bounds (make-color-get-probing-region-bounds)))
+    (if bounds
+        (make-color-highlight-region (car bounds) (cdr bounds))
+      (make-color-set-probing-region))))
 
 
 ;;; UI
