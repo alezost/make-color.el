@@ -1,10 +1,10 @@
-;;; make-color.el --- Update fg/bg color of a text sample by pressing r/g/b/... keys
+;;; make-color.el --- Alternative to picking color - update fg/bg color by pressing r/g/b/... keys
 
 ;; Copyright (C) 2014 Alex Kost
 
 ;; Author: Alex Kost <alezost@gmail.com>
 ;; Created: 9 Jan 2014
-;; Version: 0.3.1
+;; Version: 0.3.2
 ;; URL: http://github.com/alezost/make-color.el
 ;; Keywords: color
 
