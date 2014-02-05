@@ -373,7 +373,7 @@ If PARAM is not found in SPEC, return nil."
 PARAM is a symbol or keyword `foreground' or `background'.
 If POS is not specified, use current point positiion."
   (let ((param (make-color-keyword param))
-        (faceprop (get-char-property (or pos (point)) 'face)))
+        (faceprop (get-text-property (or pos (point)) 'face)))
     (or (and faceprop
              (make-color-get-color-from-face-spec param faceprop))
         ;; if color was not found, use default face
@@ -546,8 +546,8 @@ Interactively, prompt for STEP."
   (if (region-active-p)
       (progn (make-color-set-probing-region-bounds
               (region-beginning) (region-end))
-             (make-color-update-current-color-maybe)
              (deactivate-mark)
+             (make-color-update-current-color-maybe)
              (message "The region was set for color probing."))
     (if (y-or-n-p (concat "No active region. Use the whole sample for colorizing?"))
         (progn (make-color-set-probing-region-bounds nil nil)
