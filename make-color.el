@@ -338,7 +338,7 @@ otherwise return an existing one."
 
 (defun make-color-set-color (param color beg end)
   "Set color of the text between BEG and END.
-Param is a symbol or keyword `foreground' or `background'.
+PARAM is a symbol or keyword `foreground' or `background'.
 COLOR should be a list in a form (R G B)."
   (facemenu-add-face (list (list (make-color-keyword param) color))
                      beg end))
