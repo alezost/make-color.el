@@ -150,7 +150,9 @@ Should accept 4 arguments:
     (define-key map "k" 'make-color-current-color-to-kill-ring)
     (define-key map "F" 'make-color-foreground-color-to-kill-ring)
     (define-key map "D" 'make-color-background-color-to-kill-ring)
-    (define-key map " " 'make-color-highlight-current-region)
+    (define-key map " " 'make-color-goto-region)
+    (define-key map "N" 'make-color-next-region)
+    (define-key map "P" 'make-color-previous-region)
     (define-key map "u" 'undo)
     (define-key map "q" 'bury-buffer)
     map)
@@ -388,6 +390,128 @@ If POS is not specified, use current point positiion."
   (make-color-get-color-at-pos :background (point)))
 
 
+;;; Probing regions
+
+(defcustom make-color-region-ring-size 20
+  "Maximum number of stored regions."
+  :type 'integer
+  :group 'make-color)
+
+(defvar make-color-region-ring nil
+  "List of stored regions.
+Each element is an overlay.")
+
+(defvar make-color-current-region-index 0
+  "Index of the current element in `make-color-region-ring'.")
+
+(defun make-color-calc-index (&optional base shift)
+  "Return index of a region from `make-color-region-ring'.
+
+Index of the returned element is a sum of BASE and SHIFT.
+If the sum exceeds the limits of `make-color-region-ring', overlap.
+
+If BASE is nil, use `make-color-current-region-index'.
+If SHIFT is nil, use 0."
+  (if make-color-region-ring
+      (mod (+ (or base make-color-current-region-index)
+              (or shift 0))
+           (length make-color-region-ring))
+    0))
+
+(defun make-color-save-region (beg end)
+  "Make overlay and save it in `make-color-region-ring'.
+BEG and END are point positions for the overlay.
+Limit the size of `make-color-region-ring' to
+`make-color-region-ring-size'.
+Return index of the saved region."
+  (when (>= (length make-color-region-ring)
+            make-color-region-ring-size)
+    (delete-overlay (car make-color-region-ring))
+    (setq make-color-region-ring (cdr make-color-region-ring)))
+  (setq make-color-region-ring
+        (append make-color-region-ring (list (make-overlay beg end))))
+  (- (length make-color-region-ring) 1))
+
+(defun make-color-get-region (&optional index)
+  "Return cons cell of start and end positions of a probing region.
+
+INDEX is a number of region in `make-color-region-ring' (counting
+from 0).  If nil, use `make-color-current-region-index'.
+
+Return nil, if there is no element with INDEX."
+  (let ((overlay (nth index make-color-region-ring)))
+    (when (and (overlayp overlay) (overlay-buffer overlay))
+      (cons (overlay-start overlay)
+            (overlay-end overlay)))))
+
+(defun make-color-set-region-as-current (index)
+  "Set region number INDEX from `make-color-region-ring' as current."
+  (setq make-color-current-region-index index))
+
+(defun make-color-get-probing-region-bounds ()
+  "Return cons cell of start and end positions of a probing region.
+Return nil if probing region is not defined."
+  (make-color-get-region
+   make-color-current-region-index)
+  ;; (let ((bounds (make-color-get-region
+  ;;                make-color-current-region-index)))
+  ;;   (when bounds
+  ;;     (cons (car bounds) (cadr bounds))))
+  )
+
+(defun make-color-set-probing-region (&optional beg end)
+  "Use region between BEG and END for colorizing.
+If BEG or END is nil, use current region."
+  (interactive)
+  (when (or (null beg) (null end))
+    (if (region-active-p)
+        (progn (setq beg (region-beginning)
+                     end (region-end))
+               (deactivate-mark)
+               (message "The region was set for color probing."))
+      (if (y-or-n-p "No active region. Use the whole sample for colorizing?")
+          (setq beg (point-min)
+                end (point-max))
+        ;; TODO do not hard-code "n"
+        (user-error "Select a region for colorizing and press \"n\""))))
+  (make-color-set-region-as-current (make-color-save-region beg end))
+  (make-color-update-current-color-maybe))
+
+(defun make-color-goto-region (&optional arg)
+  "Switch to the probing region number ARG and highlight it.
+Regions are enumerated from 0.
+If ARG is nil, highlight current probing region.
+Negative ARG means count from the end of saved regions."
+  (interactive
+   (list (cond
+          ((eq '- current-prefix-arg) -1)
+          ((consp current-prefix-arg) (car current-prefix-arg))
+          (t current-prefix-arg))))
+  (if arg
+      (let ((index (make-color-calc-index arg)))
+        (if (make-color-get-region index)
+            (progn
+              (make-color-set-region-as-current index)
+              (make-color-update-current-color-maybe)
+              (make-color-highlight-current-region))
+          (make-color-set-probing-region)))
+    (make-color-highlight-current-region)))
+
+(defun make-color-next-region (&optional arg)
+  "Switch to the next probing region.
+With ARG, skip so many regions."
+  (interactive "p")
+  (or arg (setq arg 1))
+  (make-color-goto-region (make-color-calc-index nil arg)))
+
+(defun make-color-previous-region (&optional arg)
+  "Switch to the previous probing region.
+With ARG, skip so many regions."
+  (interactive "p")
+  (or arg (setq arg 1))
+  (make-color-next-region (- arg)))
+
+
 ;;; Highlighting regions
 
 (defface make-color-highlight
@@ -400,7 +524,7 @@ If POS is not specified, use current point positiion."
   :type 'number
   :group 'make-color)
 
-(defvar make-color-highlight-wait-function 'run-at-time
+(defvar make-color-highlight-wait-function 'sit-for
   "Function used for waiting until highlighting will be removed.
 Can be either `sit-for' or `run-at-time'.")
 
@@ -437,35 +561,23 @@ See `make-color-highlight-region' for details."
   (interactive)
   (let ((bounds (make-color-get-probing-region-bounds)))
     (if bounds
-        (make-color-highlight-region (car bounds) (cdr bounds))
+        (progn
+          (message "Region %d of 0-%d."
+                   make-color-current-region-index
+                   (- (length make-color-region-ring) 1))
+          (make-color-highlight-region (car bounds) (cdr bounds)))
       (make-color-set-probing-region))))
 
 
 ;;; UI
-
-(defvar make-color-probing-region-bounds nil
-  "Cons cell of start and end positions of a probing text.")
-
-(defun make-color-get-probing-region-bounds ()
-  "Return cons cell of start and end positions of a probing region.
-Return nil if probing region is not defined."
-  (when make-color-probing-region-bounds
-    ;; if bounds are nils, use the whole sample
-    (cons (or (car make-color-probing-region-bounds)
-              (point-min))
-          (or (cdr make-color-probing-region-bounds)
-              (point-max)))))
-
-(defun make-color-set-probing-region-bounds (beg end)
-  "Set start and end positions of a probing region to BEG and END."
-  (setq make-color-probing-region-bounds (cons beg end)))
 
 (define-derived-mode make-color-mode nil "MakeColor"
   "Major mode for making color.
 
 \\{make-color-mode-map}"
   (make-local-variable 'make-color-current-color)
-  (make-local-variable 'make-color-probing-region-bounds)
+  (make-local-variable 'make-color-region-ring)
+  (make-local-variable 'make-color-current-region-index)
   (make-local-variable 'make-color-shift-step)
   (make-local-variable 'make-color-face-keyword))
 
@@ -524,9 +636,8 @@ If region is active, use it as the sample."
     (insert sample)
     (goto-char (point-min))
     (and region
-         (make-color-set-probing-region-bounds
-          (car region) (cdr region)))
-    (make-color-update-current-color-maybe)))
+         (make-color-set-probing-region
+          (car region) (cdr region)))))
 
 (defun make-color-set-step (step)
   "Set `make-color-shift-step' to a value STEP.
@@ -538,22 +649,6 @@ Interactively, prompt for STEP."
            (<= 0.0 step))
       (setq make-color-shift-step step)
     (error "Should be a value from 0.0 to 1.0")))
-
-(defun make-color-set-probing-region ()
-  "Use current region for colorizing."
-  (interactive)
-  (make-color-check-mode)
-  (if (region-active-p)
-      (progn (make-color-set-probing-region-bounds
-              (region-beginning) (region-end))
-             (deactivate-mark)
-             (make-color-update-current-color-maybe)
-             (message "The region was set for color probing."))
-    (if (y-or-n-p (concat "No active region. Use the whole sample for colorizing?"))
-        (progn (make-color-set-probing-region-bounds nil nil)
-               (make-color-update-current-color-maybe))
-      ;; TODO do not hard-code "n"
-      (message "Select a region for colorizing and press \"n\"."))))
 
 (defun make-color-set-current-color ()
   "Set current color to the prompted value and update probing region."
