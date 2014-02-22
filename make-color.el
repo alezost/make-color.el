@@ -284,13 +284,14 @@ For other args, see `make-color-define-shift-function'."
 
 ;;;###autoload
 (defun make-color-switch-to-buffer (&optional arg)
-  "Switch to make-color buffer or create one.
-With prefix, make a new make-color buffer unconditionally."
+  "Switch to make-color buffer or create one if needed.
+With prefix (if ARG is non-nil), make a new make-color buffer."
   (interactive "P")
   (let ((bufs (make-color-get-buffers))
         buf)
     (if (or arg (null bufs))
-        (make-color)
+        (let (make-color-use-single-buffer)
+          (make-color))
       ;; delete current make-color buffer from `bufs'
       (when (eq major-mode 'make-color-mode)
         (setq bufs (delete (current-buffer) bufs)))
@@ -316,15 +317,15 @@ With prefix, make a new make-color buffer unconditionally."
      (lambda (buf) (string-match re (buffer-name buf)))
      (buffer-list))))
 
-(defun make-color-get-buffer (&optional clear)
+(defun make-color-get-buffer (&optional clear unique)
   "Return make-color buffer.
-If CLEAR is non-nil, delete contents of the buffer.
-If `make-color-use-single-buffer' is nil, create a new buffer,
-otherwise return an existing one."
+The name of the buffer is defined by `make-color-buffer-name'.
+If CLEAR is non-nil, delete the contents of the buffer.
+If UNIQUE is non-nil, create a unique buffer."
   (let ((buf (get-buffer-create
-              (if make-color-use-single-buffer
-                  make-color-buffer-name
-                (generate-new-buffer-name make-color-buffer-name)))))
+              (if unique
+                  (generate-new-buffer-name make-color-buffer-name)
+                make-color-buffer-name))))
     (when clear
       (with-current-buffer buf (erase-buffer)))
     buf))
@@ -620,10 +621,15 @@ If BUFFER is nil, use current buffer."
         (make-color-set-probing-region)))))
 
 ;;;###autoload
-(defun make-color ()
-  "Begin to make color by modifying a text sample.
-If region is active, use it as the sample."
-  (interactive)
+(defun make-color (&optional arg)
+  "Begin to make a color by modifying a text sample.
+If region is active, use it as the sample.
+
+The name of the buffer is defined by `make-color-buffer-name'.
+If `make-color-use-single-buffer' is non-nil, use an existing
+make-color buffer (with ARG, create a new buffer), otherwise
+create a new buffer (with ARG, use an existing one)."
+  (interactive "P")
   ;; `sample' is the whole text yanking in make-color buffer;
   ;; `region' is a part of this text used for colorizing
   (let (sample region)
@@ -631,7 +637,10 @@ If region is active, use it as the sample."
         (setq sample (buffer-substring (region-beginning) (region-end)))
       (setq sample make-color-sample
             region (cons make-color-sample-beg make-color-sample-end)))
-    (pop-to-buffer-same-window (make-color-get-buffer 'clear))
+    (pop-to-buffer-same-window
+     (make-color-get-buffer
+      'clear
+      (if make-color-use-single-buffer arg (null arg))))
     (make-color-mode)
     (insert sample)
     (goto-char (point-min))
