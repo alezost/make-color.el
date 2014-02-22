@@ -4,7 +4,7 @@
 
 ;; Author: Alex Kost <alezost@gmail.com>
 ;; Created: 9 Jan 2014
-;; Version: 0.3.2
+;; Version: 0.4
 ;; URL: http://github.com/alezost/make-color.el
 ;; Keywords: color
 
@@ -43,10 +43,12 @@
 ;;   - RET - change current color (prompt for a value)
 
 ;; If you are satisfied with current color, press "k" to put the color
-;; into `kill-ring'.  Any time you can set a new probing region with
-;; "n".  If you forgot where the probing region is placed, press "SPC".
-;; Also you can switch between modifying background/foreground colors
-;; with "t".  See mode description ("C-h m") for other key bindings.
+;; into `kill-ring'.  At any time you can set a new probing region with
+;; "n".  You can navigate through a history of probing regions with
+;; "SPC", "N" and "P".  If you forgot where the current probing region
+;; is placed, press "SPC".  Also you can switch between modifying
+;; background/foreground colors with "t".  See mode description ("C-h
+;; m") for other key bindings.
 
 ;; Buffer in `make-color-mode' is not read-only, so you can yank and
 ;; delete text and undo the changes as you always do.
