@@ -4,8 +4,8 @@
 
 ;; Author: Alex Kost <alezost@gmail.com>
 ;; Created: 9 Jan 2014
-;; Version: 0.4
-;; URL: http://github.com/alezost/make-color.el
+;; Version: 0.4.1
+;; URL: https://github.com/alezost/make-color.el
 ;; Keywords: color
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -53,7 +53,7 @@
 ;; Buffer in `make-color-mode' is not read-only, so you can yank and
 ;; delete text and undo the changes as you always do.
 
-;; For full description, see <http://github.com/alezost/make-color.el>.
+;; For full description, see <https://github.com/alezost/make-color.el>.
 
 ;;; Code:
 
@@ -99,6 +99,12 @@ If nil, end probing text in the end of the sample."
 (defcustom make-color-use-single-buffer t
   "If nil, create a new make-color buffer for each `make-color' call.
 If non-nil, use only one make-color buffer."
+  :type 'boolean
+  :group 'make-color)
+
+(defcustom make-color-use-whole-sample nil
+  "If non-nil, use the whole sample text after \\[make-color].
+If nil, prompt for that after calling `make-color' on a selected text."
   :type 'boolean
   :group 'make-color)
 
@@ -455,16 +461,12 @@ Return nil, if there is no element with INDEX."
   "Return cons cell of start and end positions of a probing region.
 Return nil if probing region is not defined."
   (make-color-get-region
-   make-color-current-region-index)
-  ;; (let ((bounds (make-color-get-region
-  ;;                make-color-current-region-index)))
-  ;;   (when bounds
-  ;;     (cons (car bounds) (cadr bounds))))
-  )
+   make-color-current-region-index))
 
-(defun make-color-set-probing-region (&optional beg end)
+(defun make-color-set-probing-region (&optional beg end force)
   "Use region between BEG and END for colorizing.
-If BEG or END is nil, use current region."
+If BEG or END is nil, use current region.  If there is no active
+region and FORCE is non-nil, use the whole buffer."
   (interactive)
   (when (or (null beg) (null end))
     (if (region-active-p)
@@ -472,7 +474,8 @@ If BEG or END is nil, use current region."
                      end (region-end))
                (deactivate-mark)
                (message "The region was set for color probing."))
-      (if (y-or-n-p "No active region. Use the whole sample for colorizing?")
+      (if (or force
+              (y-or-n-p "No active region. Use the whole sample for colorizing?"))
           (setq beg (point-min)
                 end (point-max))
         ;; TODO do not hard-code "n"
@@ -636,9 +639,14 @@ create a new buffer (with ARG, use an existing one)."
   ;; `region' is a part of this text used for colorizing
   (let (sample region)
     (if (region-active-p)
-        (setq sample (buffer-substring (region-beginning) (region-end)))
+        (progn
+          (setq sample (buffer-substring (region-beginning)
+                                         (region-end)))
+          (when make-color-use-whole-sample
+            (setq region (cons nil nil))))
       (setq sample make-color-sample
-            region (cons make-color-sample-beg make-color-sample-end)))
+            region (cons make-color-sample-beg
+                         make-color-sample-end)))
     (pop-to-buffer-same-window
      (make-color-get-buffer
       'clear
@@ -648,7 +656,7 @@ create a new buffer (with ARG, use an existing one)."
     (goto-char (point-min))
     (and region
          (make-color-set-probing-region
-          (car region) (cdr region)))))
+          (car region) (cdr region) t))))
 
 (defun make-color-set-step (step)
   "Set `make-color-shift-step' to a value STEP.
