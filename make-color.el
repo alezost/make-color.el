@@ -478,10 +478,21 @@ region and FORCE is non-nil, use the whole buffer."
               (y-or-n-p "No active region. Use the whole sample for colorizing?"))
           (setq beg (point-min)
                 end (point-max))
-        ;; TODO do not hard-code "n"
-        (user-error "Select a region for colorizing and press \"n\""))))
+        (user-error
+         (format "Select a region for colorizing and press \"%s\""
+                 (or (make-color-command-key
+                      'make-color-set-probing-region)
+                     "M-x make-color-set-probing-region"))))))
   (make-color-set-region-as-current (make-color-save-region beg end))
   (make-color-update-current-color-maybe))
+
+(defun make-color-command-key (command &optional map)
+  "Return key bound to COMMAND in MAP.
+If MAP is nil, use `make-color-mode-map'.
+Return nil, if COMMAND is not bound."
+  (let ((key (where-is-internal
+              command (list (or map make-color-mode-map)) t)))
+    (and key (key-description key))))
 
 (defun make-color-goto-region (&optional arg)
   "Switch to the probing region number ARG and highlight it.
