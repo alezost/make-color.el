@@ -27,8 +27,8 @@ see how a probing region of text changes its foreground/background color
 
 ### MELPA
 
-The package can be installed from [MELPA](http://melpa.milkbox.net)
-(with `M-x package-install` or `M-x list-packages`).
+The package can be installed from [MELPA](http://melpa.org) (with `M-x
+package-install` or `M-x list-packages`).
 
 ## Usage
 
