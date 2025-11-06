@@ -1,6 +1,6 @@
-;;; make-color.el --- Alternative to picking color - update fg/bg color by pressing r/g/b/... keys
+;;; make-color.el --- Alternative to picking color - update fg/bg color by pressing r/g/b/... keys  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2014 Alex Kost
+;; Copyright © 2014, 2025 Alex Kost
 
 ;; Author: Alex Kost <alezost@gmail.com>
 ;; Created: 9 Jan 2014
@@ -58,7 +58,8 @@
 ;;; Code:
 
 (require 'color)
-(require 'cl-macs)
+(require 'facemenu)
+(require 'cl-lib)
 
 (defgroup make-color nil
   "Find suitable color by modifying a text sample."
@@ -186,8 +187,8 @@ This is a wrapper for `color-rgb-to-hex' using
 (defun make-color-+ (nums &optional overlap)
   "Return sum of float numbers from 0.0 to 1.0 from NUMS list.
 Returning value is always between 0.0 and 1.0 inclusive.
-If OVERLAP is non-nil and the sum exceeds the limits, oh god i
-can't formulate it, look at the code."
+If OVERLAP is non-nil and the sum exceeds the limits, then something
+good is happening."
   (let ((res (apply #'+ nums)))
     (if overlap
         (let ((frac (- res (truncate res))))
