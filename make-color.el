@@ -4,7 +4,7 @@
 
 ;; Author: Alex Kost <alezost@gmail.com>
 ;; Created: 9 Jan 2014
-;; Version: 0.4.1
+;; Version: 0.5
 ;; URL: https://github.com/alezost/make-color.el
 ;; Keywords: color
 
@@ -146,6 +146,12 @@ Should accept 4 arguments:
   :type 'function
   :group 'make-color)
 
+(defcustom make-color-digits-per-component 2
+  "Digits per color component in the hex representation of a color.
+This variable is passed to `color-rgb-to-hex' as argument."
+  :type '(choice (const 2) (const 4))
+  :group 'make-color)
+
 (defvar make-color-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-j" 'newline)
@@ -165,6 +171,14 @@ Should accept 4 arguments:
     (define-key map "q" 'bury-buffer)
     map)
   "Keymap containing make-color commands.")
+
+(defun make-color-rgb-to-hex (color)
+  "Return hexadecimal #RGB notation for COLOR.
+This is a wrapper for `color-rgb-to-hex' using
+`make-color-digits-per-component' as the last argument"
+  (apply #'color-rgb-to-hex
+         (append color
+                 (list make-color-digits-per-component))))
 
 
 ;;; Changing colors
@@ -628,7 +642,7 @@ If BUFFER is nil, use current buffer."
       (if bounds
           (progn
             (setq make-color-current-color color
-                  color (apply 'color-rgb-to-hex color))
+                  color (make-color-rgb-to-hex color))
             (funcall make-color-set-color-function
                      make-color-face-keyword color
                      (car bounds) (cdr bounds))
@@ -687,8 +701,8 @@ Interactively, prompt for STEP."
                 (concat "Color"
                         (and make-color-current-color
                              (format " (current: %s)"
-                                     (apply 'color-rgb-to-hex
-                                            make-color-current-color)))
+                                     (make-color-rgb-to-hex
+                                      make-color-current-color)))
                         ": "))))
     (unless (string= color "")
       (make-color-update-sample (color-name-to-rgb color)))))
@@ -732,7 +746,7 @@ See `make-color-new-color-after-region-change'."
 COLOR can be a string (color name or a hex value) or a list in a
 form (R G B)."
   (when (listp color)
-    (setq color (apply 'color-rgb-to-hex color)))
+    (setq color (make-color-rgb-to-hex color)))
   (kill-new color)
   (message "Color '%s' has been put into kill-ring." color))
 
